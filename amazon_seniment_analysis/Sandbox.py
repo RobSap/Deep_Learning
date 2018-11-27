@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.ensemble import RandomForestClassifier
@@ -28,9 +29,6 @@ import pandas as pd
 import time
 from collections import Counter
 from apyori import apriori
-#list1=['apple','egg','apple','banana','egg','apple']
-#counts = Counter(list1)
-#print(counts)
 
 def predctions_helpful_and_not(df,word):
     df2=convert_spark_df_to_pd_df(df)
@@ -50,7 +48,7 @@ def predctions_helpful_and_not(df,word):
     #print(review_text)
    
 
-    x_train, x_test, y_train, y_test = train_test_split(df2.reviewText, df2.vote, random_state=0)
+    x_train, x_test, y_train, y_test = train_test_split(df2.reviewText, df2.vote,test_size=0.2, random_state=0)
 
     #print(x_train)
     #Count words, only add them if they have a min of 3
@@ -128,8 +126,8 @@ def predctions_good_bad_review(df,word):
 
     start = time.time()
 
-    #limit = 9282
-    limit = 1000000
+    limit = 9282
+    #limit = 1000000
     #limit = 1000
     #limit = 100
     lrmodel =LogisticRegression()
@@ -211,13 +209,15 @@ def main():
     #Load all the files in one directory, return df
     print("Loading json file(s)")
     #df=run_spark(spark,'/Volumes/TOSHIBA/desktop/data_sets/')
+   
+    '''
     df=run_spark(spark,'/Volumes/TOSHIBA/desktop/data_sets/reviews_Amazon_Instant_Video_5.json')
     #reviewText
     df2=convert_spark_df_to_pd_df(df) 
 
     print(df2)
     df2=pd.DataFrame(columns=['reviewText'])
-
+    '''
 
     #Data Mining
     ''' 
@@ -246,7 +246,7 @@ def main():
     #Make predictions based on word count. Add up the value of each word. And based on the fequency
     #make the prediciton if the review is positive or negative
  
-    predctions_good_bad_review(df,"good")
+#    predctions_good_bad_review(df,"good")
    
     ''' 
     #Same preidctions as above, but predictiong bad
@@ -282,38 +282,35 @@ def main():
    
     ''' 
     #Load only amazon instant video results
-    df_small=run_spark(spark,"data_sets/reviews_Amazon_Instant_Video_5.json")
-
+    #df=run_spark(spark,'/Volumes/TOSHIBA/desktop/data_sets/reviews_Amazon_Instant_Video_5.json')
     temp0= df.select('asin').collect() 
-    temp = df.select('reviewText').collect()
+    temp = df.select('reviewText',"overall").collect()
     temp2 = df.select('overall').collect()
     temp3 = df.select('helpful').collect()
     #df=df.count().orderBy('count', ascending=False)
-    print(df)
-    '''
-
-    '''
+    #print(temp)
+    
+    
+    #This is to look at the sentiment, entry by entry
     print("Using Sentiment analyzer") 
     for i,item in enumerate(temp):
-        if ((temp3[i].helpful[0] >3 or temp3[i].helpful[1] >  3)):# and temp0[i].asin=='B00I3MPDP4'):
+        #if ((temp3[i].helpful[0] >3 or temp3[i].helpful[1] >  3)):# and temp0[i].asin=='B00I3MPDP4'):
             print("Helpfull votes: " + str(temp3[i].helpful[0]))
             print("UnHelpfull votes: " + str(temp3[i].helpful[1]))
             
             print("On review " + str(i) + " of " + str(len(temp)))
-            print(temp[i].reviewText)
+            #print(temp[i].reviewText)
             blob = TextBlob(temp[i].reviewText,analyzer=NaiveBayesAnalyzer())
             print("Sentiment")
             print(blob.sentiment)
-            print("Reviewers actually score: " + str(temp2[i].overall))
+            print("Reviewers actual score: " + str(temp2[i].overall))
             print("Reviewers adjusted score: " + str((25*temp2[i].overall)-25))
             print("Difference in score : " + str((100*blob.sentiment.p_pos) - ((25*temp2[i].overall)-25)))
             print("\n") 
-            #predctions_good_bad_review(df,"good")      
-    '''
 
 
+    
 
-    spark.stop()
 
 if __name__ == "__main__":
     main()
